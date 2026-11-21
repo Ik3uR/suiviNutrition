@@ -272,6 +272,7 @@ main {
 
 /* ---------- effort ---------- */
 .type-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.type-btn.lutte { grid-column: 1 / -1; }
 .type-btn {
   min-height: 64px; border-radius: 14px; border: 0; background: var(--accent); color: var(--accent-text);
   font-weight: 700; font-size: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
@@ -285,6 +286,8 @@ main {
 .badge { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 8px; background: var(--info-soft); white-space: nowrap; }
 .badge.renfo { background: var(--accent-soft); }
 .badge.course { background: var(--warn-soft); }
+.badge.lutte { background: var(--bad-soft); }
+.stat-grid small { font-size: 12px; font-weight: 500; }
 .exercises { display: flex; flex-direction: column; gap: 10px; }
 .ex-card { background: var(--card); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
 .ex-head { display: flex; align-items: center; justify-content: space-between; }

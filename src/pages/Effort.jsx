@@ -4,6 +4,7 @@ import { Empty, Icon, NumInput, Segmented, Sheet, toast } from '../ui.jsx';
 import { addDays, fmtDay, fmtNum, num, r0, today, weekStart } from '../util.js';
 
 export const TYPES = {
+  lutte: { label: 'Lutte', long: 'Entraînement de lutte' },
   renfo: { label: 'Renfo', long: 'Renforcement (maison)' },
   course: { label: 'Course', long: 'Course à pied' },
   natation: { label: 'Natation', long: 'Natation' },
@@ -15,6 +16,20 @@ const RPE = [
   { id: 3, label: 'Moyen' },
   { id: 4, label: 'Dur' },
   { id: 5, label: 'Très dur' },
+];
+
+// Lutte : type de séance (déroulé) et intensité, qui varie d'un jour à l'autre.
+export const LUTTE_FOCUS = [
+  { id: 'standard', label: 'Standard', desc: 'Échauffement poussé + renfo, puis technique, puis combats haute intensité', intensity: 3 },
+  { id: 'combats', label: 'Combats', desc: 'Séance centrée sur les combats', intensity: 4 },
+  { id: 'renfo', label: 'Renfo', desc: 'Séance centrée sur le renforcement', intensity: 3 },
+  { id: 'technique', label: 'Technique', desc: 'Séance centrée sur la technique', intensity: 2 },
+];
+export const LUTTE_INTENSITY = [
+  { id: 1, label: 'Légère', met: 4.5 },
+  { id: 2, label: 'Modérée', met: 6 },
+  { id: 3, label: 'Intense', met: 7.5 },
+  { id: 4, label: 'Très intense', met: 9 },
 ];
 
 /**
@@ -33,6 +48,11 @@ export function estimateKcal(s, weightKg) {
     const met = s.rpe <= 2 ? 5.8 : s.rpe >= 4 ? 9.8 : 7;
     return met * kg * h;
   }
+  if (s.type === 'lutte') {
+    // Moyenne sur toute la séance, pauses comprises (lutte/arts martiaux : MET 6 à 10 selon l'intensité)
+    const met = LUTTE_INTENSITY.find((x) => x.id === s.intensity)?.met ?? 7.5;
+    return met * kg * h;
+  }
   const met = s.rpe >= 4 ? 5 : 3.5; // renforcement musculaire
   return met * kg * h;
 }
@@ -44,6 +64,13 @@ export function sessionSummary(s) {
       s.duration && `${s.duration} min`,
       s.distance && `${fmtNum(s.distance, 2)} km`,
       pace && `${Math.floor(pace)}'${String(Math.round((pace % 1) * 60)).padStart(2, '0')}"/km`,
+    ].filter(Boolean).join(' · ');
+  }
+  if (s.type === 'lutte') {
+    return [
+      s.duration && `${s.duration} min`,
+      LUTTE_FOCUS.find((x) => x.id === s.focus)?.label,
+      LUTTE_INTENSITY.find((x) => x.id === s.intensity)?.label.toLowerCase(),
     ].filter(Boolean).join(' · ');
   }
   if (s.type === 'natation') {
@@ -70,6 +97,12 @@ export function Effort() {
         base.exercises = last.exercises.map((e) => ({ ...e, sets: e.sets.map((x) => ({ ...x })) }));
       } else base.exercises = [];
     }
+    if (type === 'lutte') {
+      // Séance type par défaut : 2 h, déroulé standard
+      base.duration = 120;
+      base.focus = 'standard';
+      base.intensity = 3;
+    }
     if (type === 'natation') {
       const last = (await db.sessions.where('type').equals('natation').sortBy('date')).pop();
       base.stroke = last?.stroke || 'Crawl';
@@ -86,7 +119,7 @@ export function Effort() {
 
       <div class="type-buttons">
         {Object.entries(TYPES).map(([id, t]) => (
-          <button key={id} class="type-btn" onClick={() => start(id)}>
+          <button key={id} class={"type-btn " + id} onClick={() => start(id)}>
             <Icon name="plus" size={20} />
             {t.label}
           </button>
@@ -96,7 +129,7 @@ export function Effort() {
       <WeekSummary week={week} />
 
       <h3 class="section-title">Séances</h3>
-      {!sessions.length && <Empty>Aucune séance. Touche Renfo, Course ou Natation pour noter la première.</Empty>}
+      {!sessions.length && <Empty>Aucune séance. Touche Lutte, Renfo, Course ou Natation pour noter la première.</Empty>}
       <div class="sessions">
         {sessions.map((s) => (
           <button key={s.id} class="session" onClick={() => setEditing(structuredClone(s))}>
@@ -121,16 +154,17 @@ function WeekSummary({ week }) {
   const m = week.filter((s) => s.type === 'natation').reduce((a, s) => a + (s.distance || 0), 0);
   const kcal = week.reduce((a, s) => a + (s.kcal || 0), 0);
   const renfo = week.filter((s) => s.type === 'renfo').length;
+  const lutte = week.filter((s) => s.type === 'lutte').length;
   return (
     <div class="card stats">
       <h3>Cette semaine</h3>
       <div class="stat-grid">
-        <div><b>{week.length}</b><span>séances</span></div>
+        <div><b>{week.length}</b><span>séance{week.length > 1 ? 's' : ''}</span></div>
         <div><b>{fmtNum(minutes)}</b><span>minutes</span></div>
-        <div><b>{renfo}</b><span>renfo</span></div>
-        <div><b>{fmtNum(km, 1)}</b><span>km course</span></div>
-        <div><b>{fmtNum(m)}</b><span>m nage</span></div>
         <div><b>≈ {fmtNum(r0(kcal))}</b><span>kcal (indic.)</span></div>
+        <div><b>{lutte}</b><span>lutte</span></div>
+        <div><b>{renfo}</b><span>renfo</span></div>
+        <div><b>{fmtNum(km, 1)} <small>km</small> · {fmtNum(m)} <small>m</small></b><span>course · nage</span></div>
       </div>
     </div>
   );
@@ -239,9 +273,26 @@ function SessionSheet({ init, onClose }) {
         </div>
       )}
 
-      <h4 class="label">Ressenti</h4>
-      <Segmented small options={RPE.map((r) => ({ id: r.id, label: String(r.id) }))} value={s.rpe} onChange={(rpe) => set({ rpe })} />
-      <p class="muted small center">{RPE.find((r) => r.id === s.rpe)?.label}</p>
+      {s.type === 'lutte' ? (
+        <>
+          <h4 class="label">Type de séance</h4>
+          <Segmented
+            small
+            options={LUTTE_FOCUS}
+            value={s.focus}
+            onChange={(focus) => set({ focus, intensity: LUTTE_FOCUS.find((f) => f.id === focus).intensity })}
+          />
+          <p class="muted small center">{LUTTE_FOCUS.find((f) => f.id === s.focus)?.desc}</p>
+          <h4 class="label">Intensité</h4>
+          <Segmented small options={LUTTE_INTENSITY} value={s.intensity} onChange={(intensity) => set({ intensity })} />
+        </>
+      ) : (
+        <>
+          <h4 class="label">Ressenti</h4>
+          <Segmented small options={RPE.map((r) => ({ id: r.id, label: String(r.id) }))} value={s.rpe} onChange={(rpe) => set({ rpe })} />
+          <p class="muted small center">{RPE.find((r) => r.id === s.rpe)?.label}</p>
+        </>
+      )}
 
       <input class="text-input" placeholder="Note (facultatif)" value={s.notes || ''} onInput={(e) => set({ notes: e.currentTarget.value })} />
 
