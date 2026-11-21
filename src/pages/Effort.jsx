@@ -22,6 +22,7 @@ const RPE = [
 export const LUTTE_FOCUS = [
   { id: 'standard', label: 'Standard', desc: 'Échauffement poussé + renfo, puis technique, puis combats haute intensité', intensity: 3 },
   { id: 'combats', label: 'Combats', desc: 'Séance centrée sur les combats', intensity: 4 },
+  { id: 'combats-renfo', label: 'Combats + renfo', desc: 'Séance consacrée aux combats et au renforcement', intensity: 4 },
   { id: 'renfo', label: 'Renfo', desc: 'Séance centrée sur le renforcement', intensity: 3 },
   { id: 'technique', label: 'Technique', desc: 'Séance centrée sur la technique', intensity: 2 },
 ];
@@ -276,12 +277,18 @@ function SessionSheet({ init, onClose }) {
       {s.type === 'lutte' ? (
         <>
           <h4 class="label">Type de séance</h4>
-          <Segmented
-            small
-            options={LUTTE_FOCUS}
-            value={s.focus}
-            onChange={(focus) => set({ focus, intensity: LUTTE_FOCUS.find((f) => f.id === focus).intensity })}
-          />
+          <div class="chips">
+            {LUTTE_FOCUS.map((f) => (
+              <button
+                key={f.id}
+                class={'chip' + (s.focus === f.id ? ' on' : '')}
+                aria-pressed={s.focus === f.id}
+                onClick={() => set({ focus: f.id, intensity: f.intensity })}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
           <p class="muted small center">{LUTTE_FOCUS.find((f) => f.id === s.focus)?.desc}</p>
           <h4 class="label">Intensité</h4>
           <Segmented small options={LUTTE_INTENSITY} value={s.intensity} onChange={(intensity) => set({ intensity })} />

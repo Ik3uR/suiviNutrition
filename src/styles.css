@@ -127,6 +127,7 @@ main {
   padding: 10px 14px; min-height: 44px; font-size: 15px; display: inline-flex; align-items: center; gap: 6px;
 }
 .chip.fav { border-color: color-mix(in srgb, var(--fav) 60%, var(--line)); }
+.chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
 .chip.tpl { background: var(--accent-soft); border-color: transparent; font-weight: 500; }
 
 /* ---------- résultats ---------- */
